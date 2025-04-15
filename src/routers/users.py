@@ -1,71 +1,75 @@
-from fastapi import APIRouter, HTTPException
-from datetime import datetime
-from ..schemas.users import *
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
+from src.schemas.users import *
+from src.schemas.base import DELETE_MODEL_RESPONSE
 import src.utils.errors as errors
+import src.db as db
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
-    responses=errors.NOT_FOUND_RESPONSE,
+    responses=errors.error_responses(
+        errors.NotFoundException, errors.ValidationException,
+    ),
 )
 
-fake_users_db = {}
 
+@router.post("/", summary="Create a new User.", response_model=User)
+async def create_user(request: UserDefault, session: Session = Depends(db.get_session)):
 
-@router.post("/", summary="Create a new User.")
-async def create_user(request: UserCreateRequest):
-    user_id = len(fake_users_db) + 1
-    new_user = {
-        "id": user_id,
-        "username": request.username,
-        "email": request.email,
-        "birth_date": request.birth_date,
-        "created_at": datetime.utcnow()
-    }
-    fake_users_db[user_id] = new_user
-    return new_user
+    user = User(**request.dict(), created_at=datetime.utcnow())
+    user.custom_validate(birth_date=user.birth_date)
 
-
-@router.get("/{user_id}", summary="Get the User by id.", response_model=UserResponse)
-async def get_user(user_id: int):
-    user = fake_users_db.get(user_id)
-
-    errors.handle_not_found_error(
-        entity_id=user_id,
-        entity_name="User",
-        entity=user,
-    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
 
     return user
 
 
-@router.put("/{user_id}", summary="Update the User Info by id.", response_model=UserResponse)
-async def update_user(user_id: int, request: UserUpdateRequest):
-    user = fake_users_db.get(user_id)
+@router.get("/", summary="Get a list of all users.", response_model=list[User])
+async def get_users(skip: int = 0, limit: int = 10, session: Session = Depends(db.get_session)):
+    users = session.query(User).offset(skip).limit(limit).all()
+    return users
 
-    errors.handle_not_found_error(
-        entity_id=user_id,
-        entity_name="User",
-        entity=user,
-    )
 
-    updated_data = request.model_dump(exclude_unset=True)
-    user.update(updated_data)
+@router.get("/{user_id}", summary="Get the User by id.", response_model=User)
+async def get_user(user_id: int, session: Session = Depends(db.get_session)):
+    user = session.query(User).filter(User.id == user_id).first()
 
-    fake_users_db[user_id] = user
+    if user is None:
+        raise errors.NotFoundException(entity_name="User", entity_id=user_id)
+
     return user
 
 
-@router.delete("/{user_id}", summary="Delete the User by id.")
-async def delete_user(user_id: int):
-    user = fake_users_db.get(user_id)
+@router.put("/{user_id}", summary="Update the User Info by id.", response_model=User)
+async def update_user(user_id: int, request: UserUpdate, session: Session = Depends(db.get_session)):
+    request.custom_validate(birth_date=request.birth_date)
 
-    errors.handle_not_found_error(
-        entity_id=user_id,
-        entity_name="User",
-        entity=user,
-    )
+    user = session.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise errors.NotFoundException(entity_name="User", entity_id=user_id)
 
-    del fake_users_db[user_id]
-    return {}
+    for key, value in request.dict(exclude_unset=True).items():
+        setattr(user, key, value)
+
+    session.commit()
+    session.refresh(user)
+
+    return user
+
+
+@router.delete("/{user_id}", summary="Delete the User by id.", responses={200: DELETE_MODEL_RESPONSE})
+async def delete_user(user_id: int, session: Session = Depends(db.get_session)):
+    user = session.query(User).filter(User.id == user_id).first()
+
+    if user is None:
+        raise errors.NotFoundException(entity_name="User", entity_id=user_id)
+
+    session.delete(user)
+    session.commit()
+
+    return {"detail": f"User with id {user_id} has been deleted."}
+

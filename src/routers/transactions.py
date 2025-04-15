@@ -1,128 +1,185 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 from typing import List
-from ..schemas.transactions import *
 
+from src.schemas.transactions import (
+    Transaction,
+    TransactionDefault,
+    TransactionUpdate,
+    TransactionCreate,
+)
+from src.schemas.users import User
+from src.schemas.categories import TransactionWithCategory
+from src.schemas.tags import (
+    Tag,
+    TransactionWithTags,
+    TransactionTagLink,
+)
+
+from src.schemas.base import DELETE_MODEL_RESPONSE
+from src.schemas.categories import Category
+
+import src.db as db
 import src.utils.errors as errors
 
 router = APIRouter(
     prefix="/transactions",
     tags=["Transactions"],
-    responses=errors.NOT_FOUND_RESPONSE,
+    responses=errors.error_responses(
+        errors.NotFoundException, errors.ValidationException,
+    ),
 )
 
-fake_transactions_db = {}
 
-fake_categories_db = {
-    1: {"id": 1, "user_id": 1, "name": "Еда", "type": "expense"},
-    2: {"id": 2, "user_id": 1, "name": "Зарплата", "type": "income"},
-}
-
-
-@router.get("/with-details", summary="List Transactions with Category details.", response_model=List[TransactionWithCategoryResponse])
-async def list_transactions_with_category_details():
-    enriched_transactions = []
-
-    for key, tx in fake_transactions_db.values():
-        category = fake_categories_db.get(tx["category_id"])
-        if not category:
-            continue
-
-        enriched_tx = {
-            "id": key,
-            **tx,
-            "category": {
-                "id": category["id"],
-                "name": category["name"],
-                "type": category["type"]
-            }
-        }
-        enriched_transactions.append(enriched_tx)
-        print(enriched_tx)
-
-    return enriched_transactions
-
-
-
-@router.post("/", summary="Create a new Transaction.", response_model=TransactionResponse)
-async def create_transaction(request: TransactionCreateRequest):
-    transaction_id = len(fake_transactions_db) + 1
-    new_transaction = {
-        "id": transaction_id,
-        "user_id": request.user_id,
-        "category_id": request.category_id,
-        "amount": request.amount,
-        "date": request.PastDate,
-        "description": request.description,
-    }
-    fake_transactions_db[transaction_id] = new_transaction
-    return new_transaction
-
-
-@router.get("/{transaction_id}", summary="Get the Transaction by id.", response_model=TransactionResponse)
-async def get_transaction(transaction_id: int):
-    transaction = fake_transactions_db.get(transaction_id)
-
-    errors.handle_not_found_error(
-        entity_id=transaction_id,
-        entity_name="Transaction",
-        entity=transaction,
-    )
-
-    return transaction
-
-
-@router.get("/", summary="List the Transaction.", response_model=List[TransactionResponse])
-async def list_transaction(
-        user_id: str | None = Query(None, description="Filter by User ID"),
-        category_id: str | None = Query(None, description="Filter by Category ID"),
-        description: str | None = Query(None, description="Filter by Description")
+@router.post("/", summary="Create a new Transaction.", response_model=TransactionWithTags)
+async def create_transaction(
+    request: TransactionCreate,
+    session: Session = Depends(db.get_session)
 ):
-    filtered_transactions = []
-    for transaction in fake_transactions_db.values():
-        if user_id and user_id != transaction["user_id"]:
-            continue
-        if category_id and category_id != transaction["category_id"].lower():
-            continue
-        if description and description.lower() not in transaction["description"].lower():
-            continue
-        filtered_transactions.append(transaction)
+    user = session.get(User, request.user_id)
+    if not user:
+        raise errors.NotFoundException(entity_name="User", entity_id=request.user_id)
 
-    return filtered_transactions
+    category = session.get(Category, request.category_id)
+    if not category:
+        raise errors.NotFoundException(entity_name="Category", entity_id=request.category_id)
 
-
-@router.put("/{transaction_id}", summary="Update the Transaction by id.", response_model=TransactionResponse)
-async def update_transaction(transaction_id: int, request: TransactionUpdateRequest):
-    transaction = fake_transactions_db.get(transaction_id)
-
-    errors.handle_not_found_error(
-        entity_id=transaction_id,
-        entity_name="Transaction",
-        entity=transaction,
+    transaction = Transaction(
+        user_id=request.user_id,
+        category_id=request.category_id,
+        amount=request.amount,
+        date=request.date,
+        description=request.description
     )
 
-    updated_data = request.model_dump(exclude_unset=True)
-    transaction.update(updated_data)
+    session.add(transaction)
+    session.commit()
+    session.refresh(transaction)
 
-    fake_transactions_db[transaction_id] = transaction
+    if request.tag_ids:
+        for tag_id in request.tag_ids:
+            tag = session.query(Tag).filter(Tag.id == tag_id).first()
+            if tag:
+                transaction_tag_link = TransactionTagLink(
+                    transaction_id=transaction.id,
+                    tag_id=tag.id
+                )
+                session.add(transaction_tag_link)
+
+        session.commit()
+
+    return TransactionWithTags(
+        id=transaction.id,
+        user_id=transaction.user_id,
+        category_id=transaction.category_id,
+        amount=transaction.amount,
+        date=transaction.date,
+        description=transaction.description,
+        tags=transaction.tags
+    )
+
+
+@router.get("/", summary="List Transactions.", response_model=List[Transaction])
+async def list_transactions(
+    user_id: int | None = Query(None),
+    category_id: int | None = Query(None),
+    description: str | None = Query(None),
+    session: Session = Depends(db.get_session)
+):
+    query = session.query(Transaction)
+
+    if user_id is not None:
+        query = query.filter(Transaction.user_id == user_id)
+    if category_id is not None:
+        query = query.filter(Transaction.category_id == category_id)
+    if description:
+        query = query.filter(Transaction.description.ilike(f"%{description}%"))
+
+    return query.all()
+
+
+@router.get("/{transaction_id}", summary="Get Transaction by ID", response_model=Transaction)
+async def get_transaction(
+    transaction_id: int,
+    session: Session = Depends(db.get_session)
+):
+    transaction = session.get(Transaction, transaction_id)
+    if not transaction:
+        raise errors.NotFoundException(entity_name="Transaction", entity_id=transaction_id)
+
     return transaction
 
 
-@router.delete("/{transaction_id}", summary="Delete the Transaction by id.")
-async def delete_transaction(transaction_id: int):
-    transaction = fake_transactions_db.get(transaction_id)
+@router.put("/{transaction_id}", summary="Update Transaction", response_model=Transaction)
+async def update_transaction(
+    transaction_id: int,
+    request: TransactionUpdate,
+    session: Session = Depends(db.get_session)
+):
+    transaction = session.get(Transaction, transaction_id)
+    if not transaction:
+        raise errors.NotFoundException(entity_name="Transaction", entity_id=transaction_id)
 
-    errors.handle_not_found_error(
-        entity_id=transaction_id,
-        entity_name="Transaction",
-        entity=transaction,
+    for key, value in request.model_dump(exclude_unset=True).items():
+        setattr(transaction, key, value)
+
+    session.commit()
+    session.refresh(transaction)
+    return transaction
+
+
+@router.delete("/{transaction_id}", summary="Delete Transaction", responses={200: DELETE_MODEL_RESPONSE})
+async def delete_transaction(
+    transaction_id: int,
+    session: Session = Depends(db.get_session)
+):
+    transaction = session.get(Transaction, transaction_id)
+    if not transaction:
+        raise errors.NotFoundException(entity_name="Transaction", entity_id=transaction_id)
+
+    session.delete(transaction)
+    session.commit()
+
+    return {"detail": f"Transaction with id {transaction_id} has been deleted."}
+
+
+@router.get("/{transaction_id}/with-category", summary="Get a specific transaction with Category details.", response_model=TransactionWithCategory)
+async def get_transaction_with_category(
+    transaction_id: int,
+    session: Session = Depends(db.get_session)
+):
+    transaction = session.query(Transaction).filter(Transaction.id == transaction_id).first()
+
+    if not transaction:
+        raise errors.NotFoundException(entity_name="Transaction", entity_id=transaction_id)
+
+    return TransactionWithCategory(
+        id=transaction.id,
+        user_id=transaction.user_id,
+        category_id=transaction.category_id,
+        amount=transaction.amount,
+        date=transaction.date,
+        description=transaction.description,
+        category=transaction.category
     )
 
-    del fake_transactions_db[transaction_id]
-    return {}
 
+@router.get("/{transaction_id}/with-tags", summary="Get a specific transaction with Tags details.", response_model=TransactionWithTags)
+async def get_transaction_with_tags(
+    transaction_id: int,
+    session: Session = Depends(db.get_session)
+):
+    transaction = session.query(Transaction).filter(Transaction.id == transaction_id).first()
 
+    if not transaction:
+        raise errors.NotFoundException(entity_name="Transaction", entity_id=transaction_id)
 
-
-
-
-
+    return TransactionWithTags(
+        id=transaction.id,
+        user_id=transaction.user_id,
+        category_id=transaction.category_id,
+        amount=transaction.amount,
+        date=transaction.date,
+        description=transaction.description,
+        tags=transaction.tags
+    )

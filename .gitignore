@@ -1,2 +1,10 @@
 # local cache files
 *.DS_Store
+**/__pycache__/
+*.pyc
+*.pyo
+
+# tmp files
+*.log
+*.bak
+*.swp

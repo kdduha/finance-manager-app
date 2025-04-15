@@ -1,89 +1,91 @@
-from fastapi import APIRouter, Query
-from typing import List
-from ..schemas.categories import *
+from fastapi import APIRouter, Query, Depends
+from sqlalchemy.orm import Session
 
+from src.schemas.categories import *
+from src.schemas.users import User
+from src.schemas.base import DELETE_MODEL_RESPONSE
 import src.utils.errors as errors
+import src.db as db
 
 router = APIRouter(
     prefix="/categories",
     tags=["Categories"],
-    responses=errors.NOT_FOUND_RESPONSE,
+    responses=errors.error_responses(
+        errors.NotFoundException, errors.ValidationException,
+    ),
 )
 
-fake_categories_db = {}
 
+@router.post("/", summary="Create a new Category.", response_model=Category)
+async def create_category(request: CategoryDefault, session: Session = Depends(db.get_session)):
+    request.custom_validate(type=request.type)
 
-@router.post("/", summary="Create a new Category.", response_model=CategoryResponse)
-async def create_category(request: CategoryCreateRequest):
-    category_id = len(fake_categories_db) + 1
-    new_category = {
-        "id": category_id,
-        "user_id": request.user_id,
-        "name": request.name,
-        "type": request.type,
-    }
-    fake_categories_db[category_id] = new_category
-    return new_category
+    user = session.get(User, request.user_id)
+    if user is None:
+        raise errors.NotFoundException(entity_name="User", entity_id=request.user_id)
 
+    category = Category(**request.dict())
 
-@router.get("/{category_id}", summary="Get the Category by id.", response_model=CategoryResponse)
-async def get_category(category_id: int):
-    category = fake_categories_db.get(category_id)
-
-    errors.handle_not_found_error(
-        entity_id=category_id,
-        entity_name="Category",
-        entity=category,
-    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
 
     return category
 
 
-@router.get("/", summary="List the Category.", response_model=List[CategoryResponse])
+@router.get("/{category_id}", summary="Get the Category by id.", response_model=Category)
+async def get_category(category_id: int, session: Session = Depends(db.get_session)):
+    category = session.query(Category).filter(Category.id == category_id).first()
+
+    if category is None:
+        raise errors.NotFoundException(entity_name="Category", entity_id=category_id)
+
+    return category
+
+
+@router.get("/", summary="List the Category.", response_model=list[Category])
 async def list_category(
         user_id: str | None = Query(None, description="Filter by User ID"),
         name: str | None = Query(None, description="Filter by Category Name"),
-        cat_type: CategoryType | None = Query(None, description="Filter by Category Type")
+        cat_type: CategoryType | None = Query(None, description="Filter by Category Type"),
+        session: Session = Depends(db.get_session)
 ):
-    filtered_categories = []
-    for category in fake_categories_db.values():
-        if user_id and user_id != category["user_id"]:
-            continue
-        if name and name.lower() not in category["name"].lower():
-            continue
-        if cat_type and cat_type != category["type"]:
-            continue
-        filtered_categories.append(category)
+    query = session.query(Category)
 
-    return filtered_categories
+    if user_id:
+        query = query.filter(Category.user_id == user_id)
+    if name:
+        query = query.filter(Category.name.ilike(f"%{name}%"))
+    if cat_type:
+        query = query.filter(Category.type == cat_type)
+
+    categories = query.all()
+    return categories
 
 
-@router.put("/{category_id}", summary="Update the Category by id.", response_model=CategoryResponse)
-async def update_category(category_id: int, request: CategoryUpdateRequest):
-    category = fake_categories_db.get(category_id)
+@router.put("/{category_id}", summary="Update the Category by id.", response_model=Category)
+async def update_category(category_id: int, request: CategoryUpdate, session: Session = Depends(db.get_session)):
+    category = session.query(Category).filter(Category.id == category_id).first()
+    if category is None:
+        raise errors.NotFoundException(entity_name="Category", entity_id=category_id)
 
-    errors.handle_not_found_error(
-        entity_id=category_id,
-        entity_name="Category",
-        entity=category,
-    )
+    for key, value in request.dict(exclude_unset=True).items():
+        setattr(category, key, value)
 
-    updated_data = request.model_dump(exclude_unset=True)
-    category.update(updated_data)
+    session.commit()
+    session.refresh(category)
 
-    fake_categories_db[category_id] = category
     return category
 
 
-@router.delete("/{category_id}", summary="Delete the Category by id.")
-async def delete_user(category_id: int):
-    category = fake_categories_db.get(category_id)
+@router.delete("/{category_id}", summary="Delete the Category by id.", responses={200: DELETE_MODEL_RESPONSE})
+async def delete_user(category_id: int, session: Session = Depends(db.get_session)):
+    category = session.query(Category).filter(Category.id == category_id).first()
 
-    errors.handle_not_found_error(
-        entity_id=category_id,
-        entity_name="Category",
-        entity=category,
-    )
+    if category is None:
+        raise errors.NotFoundException(entity_name="Category", entity_id=category_id)
 
-    del fake_categories_db[category_id]
-    return {}
+    session.delete(category)
+    session.commit()
+
+    return {"detail": f"Category with id {category_id} has been deleted."}

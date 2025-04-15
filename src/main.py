@@ -1,7 +1,13 @@
+from src import db, app
 import uvicorn
-from src.app import create_app
 
-app = create_app()
+app = app.init()
+
+
+@app.on_event("startup")
+def on_startup():
+    db.init()
+
 
 if __name__ == "__main__":
-    uvicorn.run("src.main:app",  reload=True)
+    uvicorn.run("src.main:app", reload=True)

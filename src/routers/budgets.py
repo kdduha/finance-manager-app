@@ -1,98 +1,92 @@
-from fastapi import APIRouter, Query
-from typing import List
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
 
-from ..schemas.budget import *
-from ..schemas.transactions import *
-
-from datetime import datetime
-
+from src.schemas.budgets import *
+from src.schemas.users import User
+from src.schemas.categories import Category
+from src.schemas.base import DELETE_MODEL_RESPONSE
 import src.utils.errors as errors
+import src.db as db
 
 router = APIRouter(
     prefix="/budgets",
     tags=["Budgets"],
-    responses=errors.NOT_FOUND_RESPONSE,
+    responses=errors.error_responses(
+        errors.NotFoundException, errors.ValidationException,
+    ),
 )
 
-fake_budgets_db = {}
 
+@router.post("/", summary="Create a new Budget.", response_model=Budget)
+def create_budget(request: BudgetDefault, session: Session = Depends(db.get_session)):
+    request.custom_validate(start_date=request.start_date, end_date=request.end_date)
 
-@router.post("/", summary="Create a new Budget.", response_model=BudgetResponse)
-async def create_budget(request: BudgetCreateRequest):
-    budget_id = len(fake_budgets_db) + 1
-    new_budget = {
-        "id": budget_id,
-        "user_id": request.user_id,
-        "category_id": request.category_id,
-        "limit_amount": request.limit_amount,
-        "start_date": datetime.utcnow(),
-        "end_date": request.end_date,
-    }
-    fake_budgets_db[budget_id] = new_budget
-    return new_budget
+    user = session.get(User, request.user_id)
+    if user is None:
+        raise errors.NotFoundException(entity_name="User", entity_id=request.user_id)
 
+    category = session.get(Category, request.category_id)
+    if category is None:
+        raise errors.NotFoundException(entity_name="Category", entity_id=request.category_id)
 
-@router.get("/{budget_id}", summary="Get the Budget by id.", response_model=BudgetResponse)
-async def get_budget(budget_id: int):
-    budget = fake_budgets_db.get(budget_id)
+    budget = Budget(**request.dict(), created_at=datetime.utcnow())
 
-    errors.handle_not_found_error(
-        entity_id=budget_id,
-        entity_name="Budget",
-        entity=budget,
-    )
+    session.add(budget)
+    session.commit()
+    session.refresh(budget)
 
     return budget
 
 
-@router.get("/", summary="List the Budget.", response_model=List[BudgetResponse])
-async def list_budget(
-        user_id: str | None = Query(None, description="Filter by User ID"),
-        category_id: str | None = Query(None, description="Filter by Category ID"),
+@router.get("/", summary="Get a list of all budgets.", response_model=list[Budget])
+async def list_budgets(
+        user_id: int | None = Query(None, description="Filter by User ID"),
+        category_id: int | None = Query(None, description="Filter by Category ID"),
+        session: Session = Depends(db.get_session)
 ):
-    filtered_budgets = []
-    for budget in fake_budgets_db.values():
-        if user_id and user_id != fake_budgets_db["user_id"]:
-            continue
-        if category_id and category_id != fake_budgets_db["category_id"].lower():
-            continue
-        filtered_budgets.append(budget)
+    query = session.query(Budget)
 
-    return filtered_budgets
+    if user_id:
+        query = query.filter(Budget.user_id == user_id)
+    if category_id:
+        query = query.filter(Budget.category_id == category_id)
+
+    budgets = query.all()
+    return budgets
 
 
-@router.put("/{budget_id}", summary="Update the Budget by id.", response_model=BudgetResponse)
-async def update_budget(budget_id: int, request: BudgetUpdateRequest):
-    budget = fake_budgets_db.get(budget_id)
+@router.get("/{budget_id}", summary="Get the Budget by id.", response_model=Budget)
+async def get_budget(budget_id: int, session: Session = Depends(db.get_session)):
+    budget = session.query(Budget).filter(Budget.id == budget_id).first()
 
-    errors.handle_not_found_error(
-        entity_id=budget_id,
-        entity_name="Budget",
-        entity=budget,
-    )
+    if budget is None:
+        raise errors.NotFoundException(entity_name="Budget", entity_id=budget_id)
 
-    updated_data = request.model_dump(exclude_unset=True)
-    budget.update(updated_data)
-
-    fake_budgets_db[budget_id] = budget
     return budget
 
 
-@router.delete("/{budget_id}", summary="Delete the Budget by id.")
-async def delete_budget(budget_id: int):
-    budget = fake_budgets_db.get(budget_id)
+@router.put("/{budget_id}", summary="Update the Budget by id.", response_model=Budget)
+async def update_budget(budget_id: int, request: BudgetUpdate, session: Session = Depends(db.get_session)):
+    budget = session.query(Budget).filter(Budget.id == budget_id).first()
 
-    errors.handle_not_found_error(
-        entity_id=budget_id,
-        entity_name="Budget",
-        entity=budget,
-    )
+    if budget is None:
+        raise errors.NotFoundException(entity_name="Budget", entity_id=budget_id)
 
-    del fake_budgets_db[budget_id]
-    return {}
+    for key, value in request.dict(exclude_unset=True).items():
+        setattr(budget, key, value)
+
+    session.commit()
+    session.refresh(budget)
+
+    return budget
 
 
-@router.get("/{budget_id}/transactions", summary="Get all transactions below the Budget.", response_model=List[TransactionResponse])
-async def list_transactions_below_budget(budget_id: int):
-    # NOT IMPLEMENTED
-    return [{"id": 0, "user_id": 0, "category_id": 0, "amount": 0.2, "date": "2023-12-23", "description": "fake"}]
+@router.delete("/{budget_id}", summary="Delete the Budget by id.", responses={200: DELETE_MODEL_RESPONSE})
+async def delete_budget(budget_id: int, session: Session = Depends(db.get_session)) :
+    budget = session.query(Budget).filter(Budget.id == budget_id).first()
+
+    if budget is None:
+        raise errors.NotFoundException(entity_name="Budget", entity_id=budget_id)
+
+    session.delete(budget)
+    session.commit()
