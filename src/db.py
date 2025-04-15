@@ -1,7 +1,8 @@
 from sqlmodel import SQLModel, Session, create_engine
+from src.config import cfg
 
-db_url = 'postgresql://kdduha@localhost/fastapi_db'
-engine = create_engine(db_url, echo=True)
+
+engine = create_engine(cfg.db.url, echo=True)
 
 
 def init() -> None:

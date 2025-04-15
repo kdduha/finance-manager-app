@@ -8,3 +8,7 @@
 *.log
 *.bak
 *.swp
+
+# configs
+.env
+alembic.ini

@@ -1,4 +1,5 @@
 from src import db, app
+from src.config import cfg
 import uvicorn
 
 app = app.init()
@@ -10,4 +11,10 @@ def on_startup():
 
 
 if __name__ == "__main__":
-    uvicorn.run("src.main:app", reload=True)
+    uvicorn.run(
+        "src.main:app",
+        host=cfg.uvicorn.host,
+        port=cfg.uvicorn.port,
+        workers=cfg.uvicorn.workers,
+        log_level=cfg.uvicorn.log_level,
+    )

@@ -1,8 +1,7 @@
 from sqlmodel import SQLModel
-from enum import Enum
 from datetime import datetime
 from src.utils import errors
-from typing import Any, Type
+from typing import Any
 
 DELETE_MODEL_RESPONSE = {
     "description": "User successfully deleted",
