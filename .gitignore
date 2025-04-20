@@ -5,6 +5,7 @@
 *.pyo
 
 # tmp files
+*.tmp/
 *.log
 *.bak
 *.swp
@@ -12,3 +13,7 @@
 # configs
 .env
 alembic.ini
+
+# editors
+.vscode
+.idea

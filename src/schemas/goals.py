@@ -1,6 +1,7 @@
-from sqlmodel import Field, Relationship
 from datetime import datetime
 from decimal import Decimal
+
+from sqlmodel import Field, Relationship
 
 from src.schemas.base import BaseSQLModel
 
@@ -21,7 +22,7 @@ class Goal(GoalDefault, table=True):
     id: int = Field(default=None, primary_key=True, sa_column_kwargs={"autoincrement": True})
     created_at: datetime
 
-    user: "User" = Relationship(back_populates="goals")
+    user: "User" = Relationship(back_populates="goals")  # noqa: F821
 
 
 class GoalUpdate(BaseSQLModel):

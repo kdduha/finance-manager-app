@@ -1,7 +1,8 @@
-from enum import Enum
-from sqlmodel import Field, Relationship
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
+
+from sqlmodel import Field, Relationship
 
 from src.schemas.base import BaseSQLModel
 
@@ -19,9 +20,9 @@ class CategoryDefault(BaseSQLModel):
 
 class Category(CategoryDefault, table=True):
     id: int = Field(default=None, primary_key=True)
-    user: "User" = Relationship(back_populates="categories")
-    transactions: list["Transaction"] = Relationship(back_populates="category")
-    budgets: list["Budget"] = Relationship(back_populates="category")
+    user: "User" = Relationship(back_populates="categories")  # noqa: F821
+    transactions: list["Transaction"] = Relationship(back_populates="category")  # noqa: F821
+    budgets: list["Budget"] = Relationship(back_populates="category")  # noqa: F821
 
 
 class CategoryUpdate(BaseSQLModel):

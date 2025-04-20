@@ -33,3 +33,11 @@ do-migration: # Apply latest migrations.
 migrate: # Create and apply migration in one step.
 	@$(MAKE) create-migration MESSAGE="$(MESSAGE)"
 	@$(MAKE) do-migration
+
+.PHONY: lint
+lint: # Lint the whole project with black and isort.
+	bash .build/check_and_lint.sh
+
+.PHONY: freeze
+freeze: # Freeze all requirements.
+	pip freeze > requirements.txt

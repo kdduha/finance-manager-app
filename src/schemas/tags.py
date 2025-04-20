@@ -1,6 +1,8 @@
-from sqlmodel import Field, Relationship
 from datetime import datetime
 from decimal import Decimal
+
+from sqlmodel import Field, Relationship
+
 from src.schemas.base import BaseSQLModel
 from src.schemas.transactions import TransactionTagLink
 
@@ -12,9 +14,9 @@ class TagDefault(BaseSQLModel):
 
 class Tag(TagDefault, table=True):
     id: int = Field(default=None, primary_key=True)
-    user: "User" = Relationship(back_populates="tags")
+    user: "User" = Relationship(back_populates="tags")  # noqa: F821
 
-    transactions: list["Transaction"] = Relationship(
+    transactions: list["Transaction"] = Relationship(  # noqa: F821
         back_populates="tags",
         link_model=TransactionTagLink,
     )

@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-from sqlmodel import SQLModel, Field, Relationship
+
+from sqlmodel import Field, Relationship, SQLModel
 
 from src.schemas.base import BaseSQLModel
 
@@ -24,10 +25,10 @@ class TransactionDefault(BaseSQLModel):
 class Transaction(TransactionDefault, table=True):
     id: int = Field(default=None, primary_key=True)
 
-    user: "User" = Relationship(back_populates="transactions")
-    category: "Category" = Relationship(back_populates="transactions")
+    user: "User" = Relationship(back_populates="transactions")  # noqa: F821
+    category: "Category" = Relationship(back_populates="transactions")  # noqa: F821
 
-    tags: list["Tag"] = Relationship(
+    tags: list["Tag"] = Relationship(  # noqa: F821
         back_populates="transactions",
         link_model=TransactionTagLink,
     )

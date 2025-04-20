@@ -1,24 +1,33 @@
-from fastapi import APIRouter, Query, Depends
 from datetime import datetime
-from sqlalchemy.orm import Session
 
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from starlette import status
+
+import src.db as db
+import src.errors as errors
+from src.auth import auth
+from src.schemas.base import DELETE_MODEL_RESPONSE
 from src.schemas.goals import Goal, GoalDefault, GoalUpdate
 from src.schemas.users import User
-from src.schemas.base import DELETE_MODEL_RESPONSE
-import src.utils.errors as errors
-import src.db as db
 
 router = APIRouter(
     prefix="/goals",
     tags=["Goals"],
     responses=errors.error_responses(
-        errors.NotFoundException, errors.ValidationException,
+        errors.NotFoundException,
+        errors.ValidationException,
+        errors.AuthorizationException,
     ),
 )
 
 
 @router.post("/", summary="Create a new Goal.", response_model=Goal)
-async def create_goal(request: GoalDefault, session: Session = Depends(db.get_session)):
+async def create_goal(
+    request: GoalDefault,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     request.custom_validate(deadline=request.deadline)
 
     user = session.get(User, request.user_id)
@@ -35,7 +44,11 @@ async def create_goal(request: GoalDefault, session: Session = Depends(db.get_se
 
 
 @router.get("/{goal_id}", summary="Get the Goal by id.", response_model=Goal)
-async def get_goal(goal_id: int, session: Session = Depends(db.get_session)):
+async def get_goal(
+    goal_id: int,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     goal = session.query(Goal).filter(Goal.id == goal_id).first()
 
     if goal is None:
@@ -46,9 +59,10 @@ async def get_goal(goal_id: int, session: Session = Depends(db.get_session)):
 
 @router.get("/", summary="List all Goals.", response_model=list[Goal])
 async def list_goals(
-        user_id: int | None = Query(None, description="Filter by User ID"),
-        name: str | None = Query(None, description="Filter by Goal Name"),
-        session: Session = Depends(db.get_session)
+    user_id: int | None = Query(None, description="Filter by User ID"),
+    name: str | None = Query(None, description="Filter by Goal Name"),
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     query = session.query(Goal)
 
@@ -62,7 +76,12 @@ async def list_goals(
 
 
 @router.put("/{goal_id}", summary="Update the Goal by id.", response_model=Goal)
-async def update_goal(goal_id: int, request: GoalUpdate, session: Session = Depends(db.get_session)):
+async def update_goal(
+    goal_id: int,
+    request: GoalUpdate,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     goal = session.query(Goal).filter(Goal.id == goal_id).first()
     if goal is None:
         raise errors.NotFoundException(entity_name="Goal", entity_id=goal_id)
@@ -76,8 +95,16 @@ async def update_goal(goal_id: int, request: GoalUpdate, session: Session = Depe
     return goal
 
 
-@router.delete("/{goal_id}", summary="Delete the Goal by id.", responses={200: DELETE_MODEL_RESPONSE})
-async def delete_goal(goal_id: int, session: Session = Depends(db.get_session)):
+@router.delete(
+    "/{goal_id}",
+    summary="Delete the Goal by id.",
+    responses={status.HTTP_200_OK: DELETE_MODEL_RESPONSE},
+)
+async def delete_goal(
+    goal_id: int,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     goal = session.query(Goal).filter(Goal.id == goal_id).first()
 
     if goal is None:

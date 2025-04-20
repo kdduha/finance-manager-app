@@ -1,32 +1,23 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
-
-from src.schemas.transactions import (
-    Transaction,
-    TransactionDefault,
-    TransactionUpdate,
-    TransactionCreate,
-)
-from src.schemas.users import User
-from src.schemas.categories import TransactionWithCategory
-from src.schemas.tags import (
-    Tag,
-    TransactionWithTags,
-    TransactionTagLink,
-)
-
-from src.schemas.base import DELETE_MODEL_RESPONSE
-from src.schemas.categories import Category
+from starlette import status
 
 import src.db as db
-import src.utils.errors as errors
+import src.errors as errors
+from src.auth import auth
+from src.schemas.base import DELETE_MODEL_RESPONSE
+from src.schemas.categories import Category, TransactionWithCategory
+from src.schemas.tags import Tag, TransactionTagLink, TransactionWithTags
+from src.schemas.transactions import Transaction, TransactionCreate, TransactionUpdate
+from src.schemas.users import User
 
 router = APIRouter(
     prefix="/transactions",
     tags=["Transactions"],
     responses=errors.error_responses(
-        errors.NotFoundException, errors.ValidationException,
+        errors.NotFoundException,
+        errors.ValidationException,
+        errors.AuthorizationException,
     ),
 )
 
@@ -34,7 +25,8 @@ router = APIRouter(
 @router.post("/", summary="Create a new Transaction.", response_model=TransactionWithTags)
 async def create_transaction(
     request: TransactionCreate,
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     user = session.get(User, request.user_id)
     if not user:
@@ -49,7 +41,7 @@ async def create_transaction(
         category_id=request.category_id,
         amount=request.amount,
         date=request.date,
-        description=request.description
+        description=request.description,
     )
 
     session.add(transaction)
@@ -60,10 +52,7 @@ async def create_transaction(
         for tag_id in request.tag_ids:
             tag = session.query(Tag).filter(Tag.id == tag_id).first()
             if tag:
-                transaction_tag_link = TransactionTagLink(
-                    transaction_id=transaction.id,
-                    tag_id=tag.id
-                )
+                transaction_tag_link = TransactionTagLink(transaction_id=transaction.id, tag_id=tag.id)
                 session.add(transaction_tag_link)
 
         session.commit()
@@ -75,16 +64,17 @@ async def create_transaction(
         amount=transaction.amount,
         date=transaction.date,
         description=transaction.description,
-        tags=transaction.tags
+        tags=transaction.tags,
     )
 
 
-@router.get("/", summary="List Transactions.", response_model=List[Transaction])
+@router.get("/", summary="List Transactions.", response_model=list[Transaction])
 async def list_transactions(
     user_id: int | None = Query(None),
     category_id: int | None = Query(None),
     description: str | None = Query(None),
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     query = session.query(Transaction)
 
@@ -101,7 +91,8 @@ async def list_transactions(
 @router.get("/{transaction_id}", summary="Get Transaction by ID", response_model=Transaction)
 async def get_transaction(
     transaction_id: int,
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     transaction = session.get(Transaction, transaction_id)
     if not transaction:
@@ -114,7 +105,8 @@ async def get_transaction(
 async def update_transaction(
     transaction_id: int,
     request: TransactionUpdate,
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     transaction = session.get(Transaction, transaction_id)
     if not transaction:
@@ -128,10 +120,15 @@ async def update_transaction(
     return transaction
 
 
-@router.delete("/{transaction_id}", summary="Delete Transaction", responses={200: DELETE_MODEL_RESPONSE})
+@router.delete(
+    "/{transaction_id}",
+    summary="Delete Transaction",
+    responses={status.HTTP_200_OK: DELETE_MODEL_RESPONSE},
+)
 async def delete_transaction(
     transaction_id: int,
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     transaction = session.get(Transaction, transaction_id)
     if not transaction:
@@ -143,10 +140,15 @@ async def delete_transaction(
     return {"detail": f"Transaction with id {transaction_id} has been deleted."}
 
 
-@router.get("/{transaction_id}/with-category", summary="Get a specific transaction with Category details.", response_model=TransactionWithCategory)
+@router.get(
+    "/{transaction_id}/with-category",
+    summary="Get a specific transaction with Category details.",
+    response_model=TransactionWithCategory,
+)
 async def get_transaction_with_category(
     transaction_id: int,
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     transaction = session.query(Transaction).filter(Transaction.id == transaction_id).first()
 
@@ -160,14 +162,19 @@ async def get_transaction_with_category(
         amount=transaction.amount,
         date=transaction.date,
         description=transaction.description,
-        category=transaction.category
+        category=transaction.category,
     )
 
 
-@router.get("/{transaction_id}/with-tags", summary="Get a specific transaction with Tags details.", response_model=TransactionWithTags)
+@router.get(
+    "/{transaction_id}/with-tags",
+    summary="Get a specific transaction with Tags details.",
+    response_model=TransactionWithTags,
+)
 async def get_transaction_with_tags(
     transaction_id: int,
-    session: Session = Depends(db.get_session)
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     transaction = session.query(Transaction).filter(Transaction.id == transaction_id).first()
 
@@ -181,5 +188,5 @@ async def get_transaction_with_tags(
         amount=transaction.amount,
         date=transaction.date,
         description=transaction.description,
-        tags=transaction.tags
+        tags=transaction.tags,
     )

@@ -1,23 +1,31 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from starlette import status
 
+import src.db as db
+import src.errors as errors
+from src.auth import auth
+from src.schemas.base import DELETE_MODEL_RESPONSE
 from src.schemas.tags import Tag, TagDefault, TagUpdate
 from src.schemas.users import User
-from src.schemas.base import DELETE_MODEL_RESPONSE
-import src.utils.errors as errors
-import src.db as db
 
 router = APIRouter(
     prefix="/tags",
     tags=["Tags"],
     responses=errors.error_responses(
-        errors.NotFoundException, errors.ValidationException,
+        errors.NotFoundException,
+        errors.ValidationException,
+        errors.AuthorizationException,
     ),
 )
 
 
 @router.post("/", summary="Create a new Tag.", response_model=Tag)
-async def create_tag(request: TagDefault, session: Session = Depends(db.get_session)):
+async def create_tag(
+    request: TagDefault,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     user = session.get(User, request.user_id)
     if user is None:
         raise errors.NotFoundException(entity_name="User", entity_id=request.user_id)
@@ -31,7 +39,11 @@ async def create_tag(request: TagDefault, session: Session = Depends(db.get_sess
 
 
 @router.get("/{tag_id}", summary="Get the Tag by id.", response_model=Tag)
-async def get_tag(tag_id: int, session: Session = Depends(db.get_session)):
+async def get_tag(
+    tag_id: int,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     tag = session.query(Tag).filter(Tag.id == tag_id).first()
     if tag is None:
         raise errors.NotFoundException(entity_name="Tag", entity_id=tag_id)
@@ -40,9 +52,10 @@ async def get_tag(tag_id: int, session: Session = Depends(db.get_session)):
 
 @router.get("/", summary="List Tags.", response_model=list[Tag])
 async def list_tags(
-        user_id: int | None = Query(None, description="Filter by User ID"),
-        name: str | None = Query(None, description="Filter by Tag Name"),
-        session: Session = Depends(db.get_session)
+    user_id: int | None = Query(None, description="Filter by User ID"),
+    name: str | None = Query(None, description="Filter by Tag Name"),
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     query = session.query(Tag)
 
@@ -55,7 +68,12 @@ async def list_tags(
 
 
 @router.put("/{tag_id}", summary="Update the Tag by id.", response_model=Tag)
-async def update_tag(tag_id: int, request: TagUpdate, session: Session = Depends(db.get_session)):
+async def update_tag(
+    tag_id: int,
+    request: TagUpdate,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     tag = session.query(Tag).filter(Tag.id == tag_id).first()
     if tag is None:
         raise errors.NotFoundException(entity_name="Tag", entity_id=tag_id)
@@ -68,8 +86,12 @@ async def update_tag(tag_id: int, request: TagUpdate, session: Session = Depends
     return tag
 
 
-@router.delete("/{tag_id}", summary="Delete the Tag by id.", responses={200: DELETE_MODEL_RESPONSE})
-async def delete_tag(tag_id: int, session: Session = Depends(db.get_session)):
+@router.delete("/{tag_id}", summary="Delete the Tag by id.", responses={status.HTTP_200_OK: DELETE_MODEL_RESPONSE})
+async def delete_tag(
+    tag_id: int,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     tag = session.query(Tag).filter(Tag.id == tag_id).first()
     if tag is None:
         raise errors.NotFoundException(entity_name="Tag", entity_id=tag_id)

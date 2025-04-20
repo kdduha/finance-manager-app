@@ -1,23 +1,36 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from starlette import status
 
-from src.schemas.categories import *
-from src.schemas.users import User
-from src.schemas.base import DELETE_MODEL_RESPONSE
-import src.utils.errors as errors
 import src.db as db
+import src.errors as errors
+from src.auth import auth
+from src.schemas.base import DELETE_MODEL_RESPONSE
+from src.schemas.categories import (
+    Category,
+    CategoryDefault,
+    CategoryType,
+    CategoryUpdate,
+)
+from src.schemas.users import User
 
 router = APIRouter(
     prefix="/categories",
     tags=["Categories"],
     responses=errors.error_responses(
-        errors.NotFoundException, errors.ValidationException,
+        errors.NotFoundException,
+        errors.ValidationException,
+        errors.AuthorizationException,
     ),
 )
 
 
 @router.post("/", summary="Create a new Category.", response_model=Category)
-async def create_category(request: CategoryDefault, session: Session = Depends(db.get_session)):
+async def create_category(
+    request: CategoryDefault,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     request.custom_validate(type=request.type)
 
     user = session.get(User, request.user_id)
@@ -34,7 +47,11 @@ async def create_category(request: CategoryDefault, session: Session = Depends(d
 
 
 @router.get("/{category_id}", summary="Get the Category by id.", response_model=Category)
-async def get_category(category_id: int, session: Session = Depends(db.get_session)):
+async def get_category(
+    category_id: int,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     category = session.query(Category).filter(Category.id == category_id).first()
 
     if category is None:
@@ -45,10 +62,11 @@ async def get_category(category_id: int, session: Session = Depends(db.get_sessi
 
 @router.get("/", summary="List the Category.", response_model=list[Category])
 async def list_category(
-        user_id: str | None = Query(None, description="Filter by User ID"),
-        name: str | None = Query(None, description="Filter by Category Name"),
-        cat_type: CategoryType | None = Query(None, description="Filter by Category Type"),
-        session: Session = Depends(db.get_session)
+    user_id: str | None = Query(None, description="Filter by User ID"),
+    name: str | None = Query(None, description="Filter by Category Name"),
+    cat_type: CategoryType | None = Query(None, description="Filter by Category Type"),
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
 ):
     query = session.query(Category)
 
@@ -64,7 +82,12 @@ async def list_category(
 
 
 @router.put("/{category_id}", summary="Update the Category by id.", response_model=Category)
-async def update_category(category_id: int, request: CategoryUpdate, session: Session = Depends(db.get_session)):
+async def update_category(
+    category_id: int,
+    request: CategoryUpdate,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     category = session.query(Category).filter(Category.id == category_id).first()
     if category is None:
         raise errors.NotFoundException(entity_name="Category", entity_id=category_id)
@@ -78,8 +101,16 @@ async def update_category(category_id: int, request: CategoryUpdate, session: Se
     return category
 
 
-@router.delete("/{category_id}", summary="Delete the Category by id.", responses={200: DELETE_MODEL_RESPONSE})
-async def delete_user(category_id: int, session: Session = Depends(db.get_session)):
+@router.delete(
+    "/{category_id}",
+    summary="Delete the Category by id.",
+    responses={status.HTTP_200_OK: DELETE_MODEL_RESPONSE},
+)
+async def delete_user(
+    category_id: int,
+    session: Session = Depends(db.get_session),
+    _: User = Depends(auth.get_current_user),
+):
     category = session.query(Category).filter(Category.id == category_id).first()
 
     if category is None:

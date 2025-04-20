@@ -1,7 +1,7 @@
 """app init
 
 Revision ID: 78b82cd3208b
-Revises: 
+Revises:
 Create Date: 2025-04-16 02:00:57.724313
 
 """
