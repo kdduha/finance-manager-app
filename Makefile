@@ -9,6 +9,10 @@ help: # Show help for each of the Makefile recipes.
 install-local: # Install all requirements locally.
 	pip install -r requirements.txt
 
+.PHONY: freeze
+freeze: # Freeze all requirements.
+	pip freeze > requirements.txt
+
 .PHONY: run-local
 run-local: # Run the app locally.
 	 python3 -m src.main
@@ -35,9 +39,10 @@ migrate: # Create and apply migration in one step.
 	@$(MAKE) do-migration
 
 .PHONY: lint
-lint: # Lint the whole project with black and isort.
+lint: # Lint the whole project with black, isort and flake8 (install, if not installed).
 	bash .build/check_and_lint.sh
 
-.PHONY: freeze
-freeze: # Freeze all requirements.
-	pip freeze > requirements.txt
+.PHONY: openapi
+openapi: # Download the OpenAPI protocol from the running app.
+	curl -sL http://localhost:8000/openapi.json \
+ 	| jq . > media/openapi.json
