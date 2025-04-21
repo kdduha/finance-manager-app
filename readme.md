@@ -50,6 +50,12 @@ openapi: Download the OpenAPI protocol from the running app.
 
 ## How to run the app? 
 
+The are several ways to launch this app.
+
+### K8s
+
+TBD
+
 ### Docker 
 
 TBD
