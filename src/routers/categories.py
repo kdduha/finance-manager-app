@@ -31,8 +31,6 @@ async def create_category(
     session: Session = Depends(db.get_session),
     _: User = Depends(auth.get_current_user),
 ):
-    request.custom_validate(type=request.type)
-
     user = session.get(User, request.user_id)
     if user is None:
         raise errors.NotFoundException(entity_name="User", entity_id=request.user_id)
