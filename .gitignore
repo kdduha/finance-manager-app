@@ -1,0 +1,19 @@
+# local cache files
+*.DS_Store
+**/__pycache__/
+*.pyc
+*.pyo
+
+# tmp files
+*.tmp/
+*.log
+*.bak
+*.swp
+
+# configs
+.env
+alembic.ini
+
+# editors
+.vscode
+.idea

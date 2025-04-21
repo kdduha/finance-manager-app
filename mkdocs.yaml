@@ -1,0 +1,10 @@
+site_name: WEB documentation
+nav:
+  - Home: index.md
+  - Lab 1:
+      - "LeetCode": lab1/leetcode.md
+      - "Practice": lab1/practice.md
+      - "Task": lab1/lab.md
+
+theme:
+  name: material
