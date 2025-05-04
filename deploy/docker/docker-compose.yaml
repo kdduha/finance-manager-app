@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  web:
+    build: ../../
+    volumes:
+      - ../../src/:/usr/app/src/
+      - ../../Makefile:/usr/app/Makefile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../../.env
+    environment:
+      - UVICORN_HOST=0.0.0.0
+      - DB_HOST=host.docker.internal
+    depends_on:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ../../deploy/prometheus.yaml:/etc/prometheus/prometheus.yaml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  grafana_data:
+  postgres_data:

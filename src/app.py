@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 import src.errors as errors
 from src.routers import auth, budgets, categories, goals, tags, transactions, users
+from src.config import cfg
 
 # === Base Routers ===
 
@@ -33,5 +34,9 @@ def init() -> FastAPI:
 
     for exc, handler in exceptions.items():
         new_app.add_exception_handler(exc, handler)
+
+    if cfg.prometheus.monitor:
+        from prometheus_fastapi_instrumentator import Instrumentator
+        Instrumentator().instrument(new_app).expose(new_app)
 
     return new_app
