@@ -22,7 +22,7 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ../../deploy/prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ../../deploy/docker/prometheus.yaml:/etc/prometheus/prometheus.yaml
     command:
       - '--config.file=/etc/prometheus/prometheus.yaml'
 

@@ -21,6 +21,14 @@ run-local: # Run the app locally.
 build-docker: # Build finance-manager-app Dockerfile.
 	docker build -t finance-manager-app .
 
+.PHONY: build-k8s
+build-k8s: # Deploy the app in k8s.
+	eval $$(minikube docker-env) && make build-docker && sh deploy/k8s/deploy_app.sh
+
+.PHONY: monitor-k8s
+monitor-k8s: # Deploy grafana and prometheus in k8s
+	sh deploy/k8s/deploy_monitoring.sh
+
 .PHONY: run-docker
 run-docker: # Run the app in the docker container.
 	docker run --name finance-manager-app-container -d \
