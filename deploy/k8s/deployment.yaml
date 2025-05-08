@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finance-manager-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: finance-manager-app
+  template:
+    metadata:
+      labels:
+        app: finance-manager-app
+    spec:
+      containers:
+      - name: finance-manager-app
+        image: finance-manager-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: UVICORN_HOST
+          value: "0.0.0.0"
+        - name: DB_HOST
+          value: "host.minikube.internal"
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finance-manager-app-service
+  labels:
+    app: finance-manager-app
+spec:
+  type: NodePort
+  selector:
+    app: finance-manager-app
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30080
