@@ -13,5 +13,5 @@ if __name__ == "__main__":
         port=cfg.uvicorn.port,
         workers=cfg.uvicorn.workers,
         log_level=cfg.uvicorn.log_level,
-        reload=True,
+        reload=cfg.uvicorn.reload,
     )
