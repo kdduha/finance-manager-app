@@ -62,7 +62,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#remove-duplicates-from-sorted-array-ii" class="md-skip">
           Skip to content
         </a>
       
@@ -420,7 +420,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       Решение
     </span>
@@ -429,7 +429,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       Код решения
     </span>
@@ -526,7 +526,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       Решение
     </span>
@@ -535,7 +535,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       Код решения
     </span>
@@ -559,39 +559,31 @@
 
 
 
-<h1 id="_1"><a href="https://leetcode.com/problems/merge-sorted-array/submissions/1471338646/?envType=study-plan-v2&amp;envId=top-interview-150">Слияние двух отсортированных массивов</a></h1>
-<h2 id="_2">Решение</h2>
+<h1 id="remove-duplicates-from-sorted-array-ii"><a href="https://leetcode.com/problems/remove-duplicates-from-sorted-array-ii/?envType=study-plan-v2&amp;envId=top-interview-150">Remove Duplicates from Sorted Array II</a></h1>
+<h2 id="_1">Решение</h2>
 <p>Для решения задачи используется метод двух указателей:</p>
 <ul>
-<li>Инициализируем два указателя</li>
-<li>p1 для последнего элемента в активной части nums1 (индекс m - 1). </li>
-<li>p2 для последнего элемента в nums2 (индекс n - 1).</li>
-<li>Третий указатель p указывает на последнюю позицию в массиве nums1 (индекс m + n - 1).</li>
-<li>Сравниваем элементы, на которые указывают p1 и p2, и вставляем больший элемент в позицию p.</li>
-<li>Повторяем процесс, пока элементы одного из массивов не будут исчерпаны.</li>
-<li>Если элементы остались в nums2, копируем их в начало nums1.</li>
+<li>Инициализируем два указателя: j для записи уникальных элементов с ограничением на два повторения.</li>
+<li>Проходим по массиву начиная с третьего элемента (индекса 2) и проверяем:</li>
+<li>Если текущий элемент не равен предыдущему элементу, записываем его на позицию j и увеличиваем j. </li>
+<li>Если текущий элемент равен предыдущему, то проверяем, встречается ли этот элемент более двух раз подряд. Если нет, записываем его на позицию j и увеличиваем j.</li>
+<li>Возвращаем количество уникальных элементов в начале массива.</li>
+<li></li>
 </ul>
-<h2 id="_3">Код решения</h2>
-<pre><code class="language-python">  def merge(nums1, m, nums2, n):
-      # Инициализация указателей
-      p1, p2 = m - 1, n - 1
-      p = m + n - 1
+<h2 id="_2">Код решения</h2>
+<pre><code class="language-python">class Solution:
+    def removeDuplicates(self, nums: List[int]) -&gt; int:
+        if len(nums) &lt;= 2:
+            return len(nums)
 
-      # Объединение массивов с конца
-      while p1 &gt;= 0 and p2 &gt;= 0:
-          if nums1[p1] &gt; nums2[p2]:
-              nums1[p] = nums1[p1]
-              p1 -= 1
-          else:
-              nums1[p] = nums2[p2]
-              p2 -= 1
-          p -= 1
+        j = 1
 
-      # Копирование оставшихся элементов из nums2
-      while p2 &gt;= 0:
-          nums1[p] = nums2[p2]
-          p2 -= 1
-          p -= 1
+        for i in range(2, len(nums)):
+            if nums[i] != nums[j-1]:
+                j += 1
+                nums[j] = nums[i]
+
+        return j + 1
 </code></pre>
 
 
