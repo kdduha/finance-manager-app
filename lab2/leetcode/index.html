@@ -61,6 +61,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#_1" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -371,6 +376,21 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    LeetCode
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -383,6 +403,43 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Решение
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Код решения
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -459,6 +516,34 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Решение
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Код решения
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -474,9 +559,40 @@
 
 
 
-  <h1>LeetCode</h1>
+<h1 id="_1"><a href="https://leetcode.com/problems/merge-sorted-array/submissions/1471338646/?envType=study-plan-v2&amp;envId=top-interview-150">Слияние двух отсортированных массивов</a></h1>
+<h2 id="_2">Решение</h2>
+<p>Для решения задачи используется метод двух указателей:</p>
+<ul>
+<li>Инициализируем два указателя</li>
+<li>p1 для последнего элемента в активной части nums1 (индекс m - 1). </li>
+<li>p2 для последнего элемента в nums2 (индекс n - 1).</li>
+<li>Третий указатель p указывает на последнюю позицию в массиве nums1 (индекс m + n - 1).</li>
+<li>Сравниваем элементы, на которые указывают p1 и p2, и вставляем больший элемент в позицию p.</li>
+<li>Повторяем процесс, пока элементы одного из массивов не будут исчерпаны.</li>
+<li>Если элементы остались в nums2, копируем их в начало nums1.</li>
+</ul>
+<h2 id="_3">Код решения</h2>
+<pre><code class="language-python">  def merge(nums1, m, nums2, n):
+      # Инициализация указателей
+      p1, p2 = m - 1, n - 1
+      p = m + n - 1
 
+      # Объединение массивов с конца
+      while p1 &gt;= 0 and p2 &gt;= 0:
+          if nums1[p1] &gt; nums2[p2]:
+              nums1[p] = nums1[p1]
+              p1 -= 1
+          else:
+              nums1[p] = nums2[p2]
+              p2 -= 1
+          p -= 1
 
+      # Копирование оставшихся элементов из nums2
+      while p2 &gt;= 0:
+          nums1[p] = nums2[p2]
+          p2 -= 1
+          p -= 1
+</code></pre>
 
 
 
