@@ -5,6 +5,10 @@ nav:
       - "LeetCode": lab1/leetcode.md
       - "Practice": lab1/practice.md
       - "Task": lab1/lab.md
+  - Lab 2:
+      - "LeetCode": lab2/leetcode.md
+      - "Task 1": lab2/task1.md
+      - "Task 2": lab2/task2.md
 
 theme:
   name: material
