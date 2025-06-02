@@ -1,14 +1,10 @@
-from celery import Celery
 import requests
 
-from src.config import cfg
 import src.errors as errors
+from celery import Celery
+from src.config import cfg
 
-celery_app = Celery(
-    "worker",
-    broker=cfg.parser.celery_broker_url,
-    backend=cfg.parser.celery_backend_url
-)
+celery_app = Celery("worker", broker=cfg.parser.celery_broker_url, backend=cfg.parser.celery_backend_url)
 
 
 @celery_app.task

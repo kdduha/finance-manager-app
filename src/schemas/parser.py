@@ -7,7 +7,7 @@ class Post(BaseModel):
 
 
 class DetailedPost(BaseModel):
-    title: str | None= None
+    title: str | None = None
     link: str
     text: str | None = None
     error: str | None = None

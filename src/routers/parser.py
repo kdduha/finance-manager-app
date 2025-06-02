@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends
-from celery.result import AsyncResult
 
-from src.config import cfg
 import src.errors as errors
+from celery.result import AsyncResult
 from src.auth import auth
 from src.celery import celery_app, parse_url_task
-from src.schemas.parser import *
-
+from src.config import cfg
+from src.schemas.parser import (
+    ParseRequest,
+    ParseResult,
+    TaskStatusResponse,
+)
 
 router = APIRouter(
     prefix="/parser",
@@ -21,8 +24,8 @@ router = APIRouter(
 
 @router.post("/parse", summary="Launch Async parsing of posts")
 def start_parsing(
-        req: ParseRequest,
-        _=Depends(auth.get_current_user),
+    req: ParseRequest,
+    _=Depends(auth.get_current_user),
 ):
     if not cfg.parser.enabled:
         raise errors.BadRequestException(detail="Parser functionality is disabled")
@@ -33,8 +36,8 @@ def start_parsing(
 
 @router.get("/task/{task_id}", response_model=TaskStatusResponse, summary="Get parsing status")
 def get_task_status(
-        task_id: str,
-        _=Depends(auth.get_current_user),
+    task_id: str,
+    _=Depends(auth.get_current_user),
 ):
     if not cfg.parser.enabled:
         raise errors.BadRequestException(detail="Parser functionality is disabled")

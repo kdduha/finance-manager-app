@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 
 import src.errors as errors
-from src.routers import auth, budgets, categories, goals, tags, transactions, users
 from src.config import cfg
+from src.routers import auth, budgets, categories, goals, tags, transactions, users
 
 # === Base Routers ===
 
@@ -34,6 +34,7 @@ def init() -> FastAPI:
 
     if cfg.parser.enabled:
         from src.routers import parser
+
         new_app.include_router(parser.router)
 
     for exc, handler in exceptions.items():
@@ -41,6 +42,7 @@ def init() -> FastAPI:
 
     if cfg.prometheus.monitor:
         from prometheus_fastapi_instrumentator import Instrumentator
+
         Instrumentator().instrument(new_app).expose(new_app)
 
     return new_app
