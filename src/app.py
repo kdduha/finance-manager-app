@@ -32,6 +32,10 @@ def init() -> FastAPI:
     for router in routers:
         new_app.include_router(router)
 
+    if cfg.parser.enabled:
+        from src.routers import parser
+        new_app.include_router(parser.router)
+
     for exc, handler in exceptions.items():
         new_app.add_exception_handler(exc, handler)
 
