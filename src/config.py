@@ -45,11 +45,21 @@ class AuthConfig(ConfigBase):
     ttl: int = Field(360)
 
 
+class ParserConfig(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="PARSER_")
+
+    enabled: bool = Field(False)
+    celery_broker_url: str
+    celery_backend_url: str
+    parser_url: str
+
+
 class Config(ConfigBase):
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     db: DataBaseConfig = Field(default_factory=DataBaseConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     prometheus: PrometheusConfig = Field(default_factory=PrometheusConfig)
+    parser: ParserConfig = Field(default_factory=ParserConfig)
 
     @classmethod
     def load(cls) -> "Config":

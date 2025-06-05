@@ -9,6 +9,8 @@ nav:
       - "LeetCode": lab2/leetcode.md
       - "Task 1": lab2/task1.md
       - "Task 2": lab2/task2.md
+  - Lab 3:
+      - "Task": lab3/task.md
 
 theme:
   name: material

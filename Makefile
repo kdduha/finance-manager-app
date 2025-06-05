@@ -1,3 +1,5 @@
+include parser/Makefile
+
 default: help
 
 .PHONY: help

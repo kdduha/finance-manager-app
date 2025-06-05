@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   web:
     build: ../../
@@ -11,10 +9,67 @@ services:
     env_file:
       - ../../.env
     environment:
-      - UVICORN_HOST=0.0.0.0
-      - DB_HOST=host.docker.internal
+
+      UVICORN_HOST: 0.0.0.0
+      DB_HOST: postgres
+      DB_PASSWORD: 12345
+
+      PARSER_ENABLED: "true"
+      PARSER_PARSER_URL: "http://parser:8080"
+      PARSER_CELERY_BROKER_URL: "redis://redis:6379/0"
+      PARSER_CELERY_BACKEND_URL: "redis://redis:6379/0"
+
     depends_on:
       - prometheus
+      - postgres
+
+  parser:
+    build:
+      context: ../../
+      dockerfile: ./parser/Dockerfile
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    environment:
+      ENV: DOCKER
+    volumes:
+      - ../../parser/:/app/parser/
+    depends_on:
+      - prometheus
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  celery-worker:
+    build:
+      context: ../../
+    command: celery -A src.celery.celery_app worker --loglevel=info
+    env_file:
+      - ../../.env
+    environment:
+      PARSER_ENABLED: "true"
+      PARSER_PARSER_URL: "http://parser:8080"
+      PARSER_CELERY_BROKER_URL: "redis://redis:6379/0"
+      PARSER_CELERY_BACKEND_URL: "redis://redis:6379/0"
+    depends_on:
+      - redis
+      - parser
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: kdduha
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: fastapi_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
   prometheus:
     image: prom/prometheus
