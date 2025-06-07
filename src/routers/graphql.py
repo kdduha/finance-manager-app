@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Request, Response, HTTPException
 import httpx
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from src.config import cfg
-import src.errors as errors
 
 router = APIRouter(
     prefix="",
@@ -29,10 +28,7 @@ async def graphql_proxy(request: Request):
                 timeout=30.0,
             )
         except httpx.RequestError as exc:
-            raise HTTPException(
-                status_code=502,
-                detail=f"Error connecting to GraphQL service: {exc}"
-            )
+            raise HTTPException(status_code=502, detail=f"Error connecting to GraphQL service: {exc}")
 
     return Response(
         content=proxied.content,
