@@ -1,4 +1,5 @@
 include parser/Makefile
+include graphql_parser/Makefile
 
 default: help
 

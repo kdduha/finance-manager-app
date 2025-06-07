@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 import src.errors as errors
 from src.config import cfg
-from src.routers import auth, budgets, categories, goals, tags, transactions, users
+from src.routers import auth, budgets, categories, goals, tags, transactions, users, graphql
 
 # === Base Routers ===
 
@@ -34,8 +34,11 @@ def init() -> FastAPI:
 
     if cfg.parser.enabled:
         from src.routers import parser
-
         new_app.include_router(parser.router)
+
+    if cfg.graphql.enabled:
+        from src.routers import graphql
+        new_app.include_router(graphql.router)
 
     for exc, handler in exceptions.items():
         new_app.add_exception_handler(exc, handler)

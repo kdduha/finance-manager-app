@@ -54,12 +54,20 @@ class ParserConfig(ConfigBase):
     parser_url: str
 
 
+class GraphQL(ConfigBase):
+    model_config = SettingsConfigDict(env_prefix="GRAPHQL_")
+
+    enabled: bool = Field(False)
+    url: str
+
+
 class Config(ConfigBase):
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     db: DataBaseConfig = Field(default_factory=DataBaseConfig)
     auth: AuthConfig = Field(default_factory=AuthConfig)
     prometheus: PrometheusConfig = Field(default_factory=PrometheusConfig)
     parser: ParserConfig = Field(default_factory=ParserConfig)
+    graphql: GraphQL = Field(default_factory=GraphQL)
 
     @classmethod
     def load(cls) -> "Config":
