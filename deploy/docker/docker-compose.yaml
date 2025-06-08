@@ -19,9 +19,13 @@ services:
       PARSER_CELERY_BROKER_URL: "redis://redis:6379/0"
       PARSER_CELERY_BACKEND_URL: "redis://redis:6379/0"
 
+      GRAPHQL_ENABLED: "true"
+      GRAPHQL_URL: "http://graphql:8090"
+
     depends_on:
       - prometheus
       - postgres
+      - graphql
 
   parser:
     build:
@@ -34,6 +38,26 @@ services:
       ENV: DOCKER
     volumes:
       - ../../parser/:/app/parser/
+    depends_on:
+      - prometheus
+
+  graphql:
+    build:
+      context: ../..
+      dockerfile: ./graphql_parser/Dockerfile
+    working_dir: /app
+    ports:
+      - "8090:8090"
+    env_file:
+      - ../../graphql_parser/.env
+    environment:
+
+      UVICORN_HOST: 0.0.0.0
+      DB_HOST: postgres
+      DB_PASSWORD: 12345
+
+    volumes:
+      - ../../graphql_parser/:/app/graphql_parser/
     depends_on:
       - prometheus
 

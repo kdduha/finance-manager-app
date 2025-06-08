@@ -34,6 +34,9 @@
   <a href="https://prometheus.io/">
     <img src="https://img.shields.io/badge/Prometheus-FF6C37?style=flat-square&logo=prometheus&logoColor=white" alt="Prometheus"/>
   </a>
+  <a href="https://graphql.org/">
+    <img src="https://img.shields.io/badge/GraphQL-E10098?style=flat-square&logo=graphql&logoColor=white" alt="GraphQL"/>
+  </a>
 </div>
 
 
@@ -46,9 +49,14 @@ The goal of this project is to practice writing a FastAPI backend in Python, wit
 * Authentication is implemented using JWT
 * Celery + Redis for background tasks (parser)
 * A linter is set up along with a GitHub workflow for linting
+* GraphQL endpoint is implemented for flexible and efficient data querying
 * The application configuration is managed via environment variables
 
 OpenAPI (Swagger) documentation can be found at `media/openapi.json`.
+
+An architecture is below: 
+
+![services](media/services.png)
 
 In order to check all available utils `Makefile` commands type: 
 ```shell

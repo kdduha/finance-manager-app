@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+strawberry-graphql[fastapi]
+sqlalchemy
+asyncpg
+sqlmodel
+pydantic-settings
+psycopg2-binary
+greenlet
